@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client postgresql-contrib >/dev/null
+
+      - name: Unit tests (97 assertions)
+        run: make test
+
+      - name: Concurrency race test
+        run: make race
+
+      - name: Seed full dataset
+        run: make seed
+
+      - name: Analytics queries run cleanly
+        run: make analytics > /dev/null
+
+      - name: Checkout benchmark (short)
+        run: PGDATABASE=stagedb ./bench/run_bench.sh 16 10

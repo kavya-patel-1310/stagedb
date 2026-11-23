@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: stagedb-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGUSER: postgres            # lets `docker exec ... psql` work without flags
+    ports:
+      - "5432:5432"
+    volumes:
+      - stagedb-data:/var/lib/postgresql/data
+      - ./:/stagedb               # project files, so scripts can run inside the container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  stagedb-data:
